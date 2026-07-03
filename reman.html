@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REMAN — Heavy Equipment Remanufacturing</title>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#10151c;
+    --steel:#182535;
+    --steel-2:#233247;
+    --amber:#f5a623;
+    --amber-deep:#c97e0f;
+    --paper:#eef0ea;
+    --paper-2:#e2e5dc;
+    --muted:#8a94a3;
+    --rivet:#3a4b60;
+  }
+  html{scroll-behavior:smooth;}
+  body{background:var(--paper); font-family:'Inter',sans-serif; color:var(--ink);}
+  .font-display{font-family:'Oswald',sans-serif;}
+  .font-mono{font-family:'JetBrains Mono',monospace;}
+
+  /* blueprint grid backdrop */
+  .blueprint{
+    background-image:
+      linear-gradient(rgba(245,166,35,0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245,166,35,0.07) 1px, transparent 1px);
+    background-size: 34px 34px;
+  }
+
+  /* nameplate / spec-tag signature element */
+  .nameplate{
+    position:relative;
+    display:inline-flex;
+    align-items:center;
+    gap:.5rem;
+    background:var(--ink);
+    color:var(--amber);
+    padding:.35rem .9rem;
+    font-family:'JetBrains Mono',monospace;
+    font-size:.65rem;
+    font-weight:700;
+    letter-spacing:.12em;
+    border-radius:2px;
+  }
+  .nameplate::before, .nameplate::after{
+    content:'';
+    width:5px;height:5px;border-radius:50%;
+    background:var(--amber);
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.5);
+  }
+
+  /* corner bracket frame - technical drawing motif */
+  .blueframe{ position:relative; }
+  .blueframe::before, .blueframe::after,
+  .blueframe .bf-tl, .blueframe .bf-br { position:absolute; width:22px; height:22px; border-color:var(--amber); z-index:5; }
+  .blueframe::before{ content:''; top:-8px; left:-8px; border-top:3px solid var(--amber); border-left:3px solid var(--amber); }
+  .blueframe::after{ content:''; bottom:-8px; right:-8px; border-bottom:3px solid var(--amber); border-right:3px solid var(--amber); }
+
+  .rivet{ width:8px; height:8px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #cbd5e1, #64748b 60%, #334155); box-shadow: inset 0 0 2px rgba(0,0,0,.6); }
+
+  ::selection{ background:var(--amber); color:var(--ink); }
+
+  /* draggable popup */
+  #dragPopup{ touch-action:none; user-select:none; }
+  #dragPopup.dragging{ cursor:grabbing; }
+  #popHandle{ cursor:grab; }
+
+  @keyframes floatIn{ from{ opacity:0; transform:translateY(16px) scale(.96);} to{opacity:1; transform:translateY(0) scale(1);} }
+  .floatIn{ animation:floatIn .5s ease both; }
+
+  .marquee-track{ animation: marquee 22s linear infinite; }
+  @keyframes marquee{ from{transform:translateX(0);} to{transform:translateX(-50%);} }
+
+  .testi-slide{ transition: transform .6s cubic-bezier(.65,0,.35,1); }
+</style>
+</head>
+<body class="antialiased pt-20">
+
+<!-- ============ NAV ============ -->
+<nav class="fixed top-0 left-0 right-0 bg-[#10151c]/95 backdrop-blur-md z-50 border-b border-[#2a3a4d]">
+  <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 bg-[var(--amber)] rounded-sm flex items-center justify-center text-[var(--ink)] font-display font-bold text-lg -skew-x-6">
+        <span class="skew-x-6">R</span>
+      </div>
+      <div>
+        <span class="font-display text-2xl font-bold text-white tracking-wide block leading-none">REMAN</span>
+        <span class="text-[9px] text-[var(--amber)] font-mono tracking-[0.25em] uppercase block mt-1">Heavy Equipment Remanufacturing</span>
+      </div>
+    </div>
+    <div class="hidden md:flex items-center gap-8 font-mono text-[11px] tracking-wider text-slate-300">
+      <a href="#beranda" class="hover:text-[var(--amber)] transition-colors">BERANDA</a>
+      <a href="#tentang" class="hover:text-[var(--amber)] transition-colors">TENTANG</a>
+      <a href="#sejarah" class="hover:text-[var(--amber)] transition-colors">SEJARAH</a>
+      <a href="#proses" class="hover:text-[var(--amber)] transition-colors">PROSES</a>
+      <a href="#katalog" class="hover:text-[var(--amber)] transition-colors">KATALOG</a>
+      <a href="#ulasan" class="hover:text-[var(--amber)] transition-colors">ULASAN</a>
+      <a href="#kontak" class="bg-[var(--amber)] text-[var(--ink)] px-5 py-3 rounded-sm font-bold hover:bg-white transition-all flex items-center gap-2">
+        <i class="fa-solid fa-headset"></i> KONTAK
+      </a>
+    </div>
+    <button id="mobileBtn" class="md:hidden text-white text-xl"><i class="fa-solid fa-bars"></i></button>
+  </div>
+  <div id="mobileMenu" class="hidden md:hidden bg-[#10151c] border-t border-[#2a3a4d] px-6 py-4 space-y-3 font-mono text-xs text-slate-300">
+    <a href="#beranda" class="block">BERANDA</a>
+    <a href="#tentang" class="block">TENTANG</a>
+    <a href="#sejarah" class="block">SEJARAH</a>
+    <a href="#proses" class="block">PROSES</a>
+    <a href="#katalog" class="block">KATALOG</a>
+    <a href="#ulasan" class="block">ULASAN</a>
+    <a href="#kontak" class="block text-[var(--amber)]">KONTAK →</a>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header id="beranda" class="relative min-h-[88vh] flex items-center bg-[var(--ink)] text-white overflow-hidden blueprint">
+  <div class="absolute inset-0 bg-gradient-to-t from-[var(--ink)] via-[var(--ink)]/70 to-transparent z-10"></div>
+  <img src="https://images.unsplash.com/photo-1523848309072-c199db53f137?fm=jpg&q=80&w=2000&auto=format&fit=crop"
+       class="absolute inset-0 w-full h-full object-cover opacity-40" alt="Alat berat tambang Kalimantan">
+
+  <div class="max-w-7xl mx-auto px-6 py-20 relative z-20 grid md:grid-cols-12 gap-10 items-end w-full">
+    <div class="md:col-span-8 space-y-6">
+      <div class="nameplate">SN.001 — REMANUFACTURING FACILITY</div>
+      <h1 class="text-4xl md:text-6xl font-display font-bold uppercase leading-[0.98] tracking-tight">
+        Komponen Aus<br>
+        Kembali <span class="text-[var(--amber)]">Presisi Nol.</span>
+      </h1>
+      <p class="text-slate-300 text-sm md:text-base leading-relaxed font-light max-w-xl">
+        REMAN merekonstruksi engine, final drive, dan pompa hidrolik alat berat hingga ke toleransi dimensi pabrikan —
+        kompatibel dengan Komatsu dan merek alat berat lainnya, dengan efisiensi biaya hingga 40% dibanding unit baru.
+      </p>
+      <div class="flex flex-wrap gap-4 pt-2">
+        <a href="#katalog" class="bg-[var(--amber)] text-[var(--ink)] font-bold px-8 py-4 rounded-sm hover:bg-white transition-all text-xs uppercase tracking-widest flex items-center">
+          <i class="fa-solid fa-layer-group mr-2"></i> Lihat Katalog
+        </a>
+        <a href="#sejarah" class="bg-white/5 text-white font-semibold px-8 py-4 rounded-sm border border-white/15 hover:bg-white/10 transition-all text-xs uppercase tracking-widest">
+          Sejarah Kami
+        </a>
+      </div>
+    </div>
+    <div class="md:col-span-4 font-mono text-[10px] text-slate-400 space-y-2 border-l border-[var(--amber)]/40 pl-5">
+      <p class="text-[var(--amber)] tracking-widest">FASILITAS.LOG</p>
+      <p>LOKASI // Karang Joang, Balikpapan Utara</p>
+      <p>SERTIFIKASI // ISO 14644-1 CLASS 7</p>
+      <p>DYNO TEST PASS RATE // 99.8%</p>
+    </div>
+  </div>
+</header>
+
+<!-- ============ STATS ============ -->
+<section class="max-w-7xl mx-auto -mt-12 px-6 relative z-30">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
+    <div class="bg-[var(--ink)] text-white p-6 rounded-sm shadow-xl border-t-2 border-[var(--amber)] text-center relative">
+      <div class="rivet absolute top-2 left-2"></div><div class="rivet absolute top-2 right-2"></div>
+      <span class="block text-3xl font-display font-bold text-[var(--amber)] mb-1">15+</span>
+      <span class="text-[9px] uppercase font-mono tracking-widest text-slate-400">Tahun Pengalaman</span>
+    </div>
+    <div class="bg-[var(--ink)] text-white p-6 rounded-sm shadow-xl border-t-2 border-[var(--amber)] text-center relative">
+      <div class="rivet absolute top-2 left-2"></div><div class="rivet absolute top-2 right-2"></div>
+      <span class="block text-3xl font-display font-bold text-[var(--amber)] mb-1">4.200+</span>
+      <span class="text-[9px] uppercase font-mono tracking-widest text-slate-400">Komponen Terkirim</span>
+    </div>
+    <div class="bg-[var(--ink)] text-white p-6 rounded-sm shadow-xl border-t-2 border-[var(--amber)] text-center relative">
+      <div class="rivet absolute top-2 left-2"></div><div class="rivet absolute top-2 right-2"></div>
+      <span class="block text-3xl font-display font-bold text-[var(--amber)] mb-1">99.8%</span>
+      <span class="text-[9px] uppercase font-mono tracking-widest text-slate-400">Lolos Dyno Test</span>
+    </div>
+    <div class="bg-[var(--ink)] text-white p-6 rounded-sm shadow-xl border-t-2 border-[var(--amber)] text-center relative">
+      <div class="rivet absolute top-2 left-2"></div><div class="rivet absolute top-2 right-2"></div>
+      <span class="block text-3xl font-display font-bold text-[var(--amber)] mb-1">12 Bln</span>
+      <span class="text-[9px] uppercase font-mono tracking-widest text-slate-400">Garansi Pabrikan</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TENTANG ============ -->
+<section id="tentang" class="max-w-7xl mx-auto py-24 px-6">
+  <div class="grid md:grid-cols-12 gap-12 items-center">
+    <div class="md:col-span-6 space-y-6">
+      <div class="nameplate">SN.002 — QUALITY ASSURANCE</div>
+      <h2 class="text-3xl md:text-4xl font-display font-bold uppercase tracking-tight">Ruang Steril, Nol Toleransi Debu</h2>
+      <div class="w-16 h-1.5 bg-[var(--amber)]"></div>
+      <p class="text-slate-600 leading-relaxed text-sm">
+        Agar usia pakai komponen hasil remanufaktur setara unit baru, seluruh proses perakitan krusial dilakukan
+        di ruang kontrol kontaminasi bersertifikat (<em>clean room</em>), meminimalkan partikel debu mikro yang
+        bisa merusak lapisan silinder internal.
+      </p>
+      <div class="border-l-4 border-[var(--amber)] pl-4 py-2 bg-amber-500/5">
+        <p class="text-xs font-bold text-[var(--amber-deep)] font-mono">ISO 14644-1 CLASS 7 CERTIFIED</p>
+        <p class="text-xs text-slate-500 mt-1">Standar internasional regulasi jumlah partikel udara maksimum per m³ ruang perakitan.</p>
+      </div>
+    </div>
+    <div class="md:col-span-6 blueframe">
+      <img src="https://images.unsplash.com/photo-1764114441097-6a475eca993d?fm=jpg&q=80&w=1200&auto=format&fit=crop"
+           class="w-full object-cover h-[360px] rounded-sm shadow-lg" alt="Mesin bubut presisi di bengkel">
+    </div>
+  </div>
+</section>
+
+<!-- ============ SEJARAH ============ -->
+<section id="sejarah" class="bg-[var(--ink)] text-white py-24 blueprint">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center max-w-2xl mx-auto mb-16 space-y-3">
+      <div class="nameplate mx-auto">SN.003 — TIMELINE</div>
+      <h2 class="text-3xl font-display font-bold uppercase">Sejarah REMAN</h2>
+      <p class="text-slate-400 text-sm font-light">Dari bengkel overhaul kecil di Balikpapan, menjadi fasilitas remanufaktur bersertifikasi.</p>
+    </div>
+
+    <div class="relative max-w-3xl mx-auto pl-8 border-l-2 border-[var(--amber)]/40 space-y-12">
+      <div class="relative">
+        <div class="absolute -left-[41px] top-1 w-5 h-5 rounded-full bg-[var(--amber)] border-4 border-[var(--ink)]"></div>
+        <p class="font-mono text-[var(--amber)] text-xs tracking-widest mb-1">2011</p>
+        <h3 class="font-display font-semibold text-lg">Bengkel Overhaul Karang Joang</h3>
+        <p class="text-slate-400 text-sm mt-1">Berawal dari bengkel overhaul komponen alat tambang skala kecil, melayani beberapa kontraktor lokal di Balikpapan Utara.</p>
+      </div>
+      <div class="relative">
+        <div class="absolute -left-[41px] top-1 w-5 h-5 rounded-full bg-[var(--amber)] border-4 border-[var(--ink)]"></div>
+        <p class="font-mono text-[var(--amber)] text-xs tracking-widest mb-1">2015</p>
+        <h3 class="font-display font-semibold text-lg">Perluasan ke Final Drive & Hydraulic Pump</h3>
+        <p class="text-slate-400 text-sm mt-1">Menambah lini remanufaktur final drive dan pompa hidrolik, seiring meningkatnya permintaan dari sektor pertambangan batubara.</p>
+      </div>
+      <div class="relative">
+        <div class="absolute -left-[41px] top-1 w-5 h-5 rounded-full bg-[var(--amber)] border-4 border-[var(--ink)]"></div>
+        <p class="font-mono text-[var(--amber)] text-xs tracking-widest mb-1">2019</p>
+        <h3 class="font-display font-semibold text-lg">Sertifikasi Clean Room ISO 14644-1</h3>
+        <p class="text-slate-400 text-sm mt-1">Membangun ruang perakitan terkontrol kontaminasi dan meraih sertifikasi kelas 7, menandai standar kualitas setara pabrikan.</p>
+      </div>
+      <div class="relative">
+        <div class="absolute -left-[41px] top-1 w-5 h-5 rounded-full bg-[var(--amber)] border-4 border-[var(--ink)]"></div>
+        <p class="font-mono text-[var(--amber)] text-xs tracking-widest mb-1">2023</p>
+        <h3 class="font-display font-semibold text-lg">4.000+ Unit Terkirim</h3>
+        <p class="text-slate-400 text-sm mt-1">Melewati tonggak 4.000 unit komponen remanufaktur terkirim dengan tingkat kelulusan dyno test 99.8%.</p>
+      </div>
+      <div class="relative">
+        <div class="absolute -left-[41px] top-1 w-5 h-5 rounded-full bg-[var(--amber)] border-4 border-[var(--ink)] animate-pulse"></div>
+        <p class="font-mono text-[var(--amber)] text-xs tracking-widest mb-1">2026</p>
+        <h3 class="font-display font-semibold text-lg">REMAN Hari Ini</h3>
+        <p class="text-slate-400 text-sm mt-1">Terus melayani pelanggan pertambangan dan konstruksi di seluruh Kalimantan dengan standar rekonstruksi presisi mikron.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PROSES ============ -->
+<section id="proses" class="py-24">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center max-w-2xl mx-auto mb-16 space-y-3">
+      <div class="nameplate mx-auto">SN.004 — WORKFLOW</div>
+      <h2 class="text-3xl font-display font-bold uppercase text-[var(--ink)]">6 Tahap Rekonstruksi Komponen Core</h2>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- 01 -->
+      <div class="bg-white p-6 rounded-sm shadow-sm border border-slate-200 relative overflow-hidden group hover:border-[var(--amber)] transition-colors">
+        <span class="absolute top-2 right-4 text-6xl font-display font-bold text-slate-100 group-hover:text-amber-100 transition-colors">01</span>
+        <div class="text-[var(--ink)] mb-4 text-2xl"><i class="fa-solid fa-truck-ramp-box"></i></div>
+        <h3 class="font-display font-semibold text-lg mb-2">Penerimaan &amp; Registrasi</h3>
+        <p class="text-xs text-slate-500 leading-relaxed">Komponen core dari site dicatat riwayat jam operasionalnya secara menyeluruh ke sistem ERP.</p>
+      </div>
+      <!-- 02 -->
+      <div class="bg-white p-6 rounded-sm shadow-sm border border-slate-200 relative overflow-hidden group hover:border-[var(--amber)] transition-colors">
+        <span class="absolute top-2 right-4 text-6xl font-display font-bold text-slate-100 group-hover:text-amber-100 transition-colors">02</span>
+        <div class="text-[var(--ink)] mb-4 text-2xl"><i class="fa-solid fa-soap"></i></div>
+        <h3 class="font-display font-semibold text-lg mb-2">Disassembly &amp; Pembersihan Makro</h3>
+        <p class="text-xs text-slate-500 leading-relaxed">Pembongkaran total tiap sub-part terkecil dilanjutkan pembersihan zat kimia bertekanan tinggi.</p>
+      </div>
+      <!-- 03 -->
+      <div class="bg-white p-6 rounded-sm shadow-sm border border-slate-200 relative overflow-hidden group hover:border-[var(--amber)] transition-colors">
+        <span class="absolute top-2 right-4 text-6xl font-display font-bold text-slate-100 group-hover:text-amber-100 transition-colors">03</span>
+        <div class="text-[var(--ink)] mb-4 text-2xl"><i class="fa-solid fa-magnifying-glass-chart"></i></div>
+        <h3 class="font-display font-semibold text-lg mb-2">Inspeksi &amp; Non-Destructive Test</h3>
+        <p class="text-xs text-slate-500 leading-relaxed">Pengujian keretakan material mikro menggunakan metode Magnaflux &amp; ultrasonik.</p>
+      </div>
+      <!-- 04 -->
+      <div class="bg-white p-6 rounded-sm shadow-sm border border-slate-200 relative overflow-hidden group hover:border-[var(--amber)] transition-colors">
+        <span class="absolute top-2 right-4 text-6xl font-display font-bold text-slate-100 group-hover:text-amber-100 transition-colors">04</span>
+        <div class="text-[var(--ink)] mb-4 text-2xl"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+        <h3 class="font-display font-semibold text-lg mb-2">Remachining &amp; Parts Replacement</h3>
+        <p class="text-xs text-slate-500 leading-relaxed">Proses bubut presisi mikron dan penggantian bearing/seal baru 100% genuine.</p>
+      </div>
+      <!-- 05 -->
+      <div class="bg-white p-6 rounded-sm shadow-sm border border-slate-200 relative overflow-hidden group hover:border-[var(--amber)] transition-colors">
+        <span class="absolute top-2 right-4 text-6xl font-display font-bold text-slate-100 group-hover:text-amber-100 transition-colors">05</span>
+        <div class="text-[var(--ink)] mb-4 text-2xl"><i class="fa-solid fa-square-poll-vertical"></i></div>
+        <h3 class="font-display font-semibold text-lg mb-2">Uji Kinerja Dinamis (Dyno Test)</h3>
+        <p class="text-xs text-slate-500 leading-relaxed">Komponen dirakit kembali dan diuji pada bangku hidrolik/mesin untuk simulasi beban kerja ekstrem.</p>
+      </div>
+      <!-- 06 -->
+      <div class="bg-white p-6 rounded-sm shadow-sm border border-slate-200 relative overflow-hidden group hover:border-[var(--amber)] transition-colors">
+        <span class="absolute top-2 right-4 text-6xl font-display font-bold text-slate-100 group-hover:text-amber-100 transition-colors">06</span>
+        <div class="text-[var(--ink)] mb-4 text-2xl"><i class="fa-solid fa-box-tissue"></i></div>
+        <h3 class="font-display font-semibold text-lg mb-2">Pengecatan Akhir &amp; Sertifikasi</h3>
+        <p class="text-xs text-slate-500 leading-relaxed">Pelapisan antikarat berstandar ekspor dan penerbitan sertifikat jaminan kualitas.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ KATALOG ============ -->
+<section id="katalog" class="bg-[var(--paper-2)] py-24">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center max-w-2xl mx-auto mb-16 space-y-3">
+      <div class="nameplate mx-auto">SN.005 — PRODUCT CATALOGUE</div>
+      <h2 class="text-3xl font-display font-bold uppercase text-[var(--ink)]">Katalog Unit Exchange Bergaransi</h2>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-8">
+      <div class="bg-white rounded-sm shadow-sm overflow-hidden border border-slate-200 flex flex-col justify-between blueframe">
+        <img src="https://images.unsplash.com/photo-1676018366904-c083ed678e60?fm=jpg&q=80&w=800&auto=format&fit=crop" class="h-48 w-full object-cover" alt="Engine assembly">
+        <div class="p-6 space-y-4">
+          <span class="font-mono text-[10px] text-[var(--amber-deep)] tracking-widest">PN. SAA6D170E-5</span>
+          <h3 class="font-display font-semibold text-lg -mt-1">Engine Assembly SAA6D170E-5</h3>
+          <p class="text-xs text-slate-500">Pembangunan kembali blok silinder, penggantian piston kit baru asli, deviasi nol untuk excavator kelas PC1250-8.</p>
+          <div class="text-xl font-display font-bold text-[var(--ink)]">Rp 550.000.000 <span class="text-[10px] font-normal text-slate-400 font-sans">/ Exch Unit</span></div>
+          <button class="w-full bg-[var(--ink)] text-white text-xs font-bold py-3 rounded-sm hover:bg-[var(--amber)] hover:text-[var(--ink)] transition-colors">REQUEST QUOTATION</button>
+        </div>
+      </div>
+      <div class="bg-white rounded-sm shadow-sm overflow-hidden border border-slate-200 flex flex-col justify-between blueframe">
+        <img src="https://images.unsplash.com/photo-1764114440403-4dd539cb582a?fm=jpg&q=80&w=800&auto=format&fit=crop" class="h-48 w-full object-cover" alt="Final drive remanufaktur">
+        <div class="p-6 space-y-4">
+          <span class="font-mono text-[10px] text-[var(--amber-deep)] tracking-widest">PN. HD785-7-FD</span>
+          <h3 class="font-display font-semibold text-lg -mt-1">Final Drive HD785-7 Reman</h3>
+          <p class="text-xs text-slate-500">Restorasi roda gigi planetari, penggantian bearing set penuh, pengujian material metode Magnaflux.</p>
+          <div class="text-xl font-display font-bold text-[var(--ink)]">Rp 195.000.000 <span class="text-[10px] font-normal text-slate-400 font-sans">/ Unit</span></div>
+          <button class="w-full bg-[var(--ink)] text-white text-xs font-bold py-3 rounded-sm hover:bg-[var(--amber)] hover:text-[var(--ink)] transition-colors">REQUEST QUOTATION</button>
+        </div>
+      </div>
+      <div class="bg-white rounded-sm shadow-sm overflow-hidden border border-slate-200 flex flex-col justify-between blueframe">
+        <img src="https://images.unsplash.com/photo-1738162837369-a2beec3a1d47?fm=jpg&q=80&w=800&auto=format&fit=crop" class="h-48 w-full object-cover" alt="Hydraulic pump precision work">
+        <div class="p-6 space-y-4">
+          <span class="font-mono text-[10px] text-[var(--amber-deep)] tracking-widest">PN. HPV160</span>
+          <h3 class="font-display font-semibold text-lg -mt-1">Hydraulic Pump HPV160</h3>
+          <p class="text-xs text-slate-500">Lapping valve plate presisi mikron, penggantian piston shoe assembly baru, uji laju aliran hidrolik.</p>
+          <div class="text-xl font-display font-bold text-[var(--ink)]">Rp 86.000.000 <span class="text-[10px] font-normal text-slate-400 font-sans">/ Unit</span></div>
+          <button class="w-full bg-[var(--ink)] text-white text-xs font-bold py-3 rounded-sm hover:bg-[var(--amber)] hover:text-[var(--ink)] transition-colors">REQUEST QUOTATION</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ULASAN ============ -->
+<section id="ulasan" class="py-24 bg-[var(--ink)] text-white overflow-hidden">
+  <div class="max-w-4xl mx-auto px-6 text-center mb-12 space-y-3">
+    <div class="nameplate mx-auto">SN.006 — TESTIMONIALS</div>
+    <h2 class="text-3xl font-display font-bold uppercase">Kata Pelanggan &amp; Tim Kami</h2>
+    <p class="text-slate-400 text-sm">Ulasan berputar otomatis. Kamu juga bisa menambahkan ulasanmu sendiri di bawah.</p>
+  </div>
+
+  <div class="max-w-3xl mx-auto px-6 relative">
+    <div class="relative h-[220px] overflow-hidden rounded-sm border border-[var(--amber)]/30 bg-[var(--steel)]">
+      <div id="testiTrack" class="h-full"></div>
+    </div>
+    <div class="flex justify-center gap-2 mt-5" id="testiDots"></div>
+  </div>
+
+  <!-- Add review form -->
+  <div class="max-w-lg mx-auto px-6 mt-14">
+    <p class="font-mono text-[10px] text-[var(--amber)] tracking-widest mb-3 text-center">TAMBAHKAN ULASANMU</p>
+    <form id="reviewForm" class="bg-[var(--steel)] p-6 rounded-sm border border-white/10 space-y-3">
+      <input id="revName" type="text" required placeholder="Nama / Perusahaan" class="w-full bg-[var(--ink)] border border-white/10 rounded-sm px-4 py-3 text-xs focus:outline-none focus:border-[var(--amber)]">
+      <textarea id="revText" rows="3" required placeholder="Tulis pengalamanmu dengan REMAN..." class="w-full bg-[var(--ink)] border border-white/10 rounded-sm px-4 py-3 text-xs focus:outline-none focus:border-[var(--amber)]"></textarea>
+      <div class="flex items-center justify-between">
+        <div id="starPicker" class="flex gap-1 text-lg text-slate-600 cursor-pointer">
+          <i class="fa-solid fa-star" data-v="1"></i><i class="fa-solid fa-star" data-v="2"></i><i class="fa-solid fa-star" data-v="3"></i><i class="fa-solid fa-star" data-v="4"></i><i class="fa-solid fa-star" data-v="5"></i>
+        </div>
+        <button type="submit" class="bg-[var(--amber)] text-[var(--ink)] text-xs font-bold px-6 py-3 rounded-sm hover:bg-white transition-colors">KIRIM ULASAN</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<!-- ============ KONTAK ============ -->
+<section id="kontak" class="bg-[var(--paper-2)] py-24">
+  <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-12 gap-10">
+    <div class="md:col-span-5 space-y-6">
+      <div class="nameplate">SN.007 — GET IN TOUCH</div>
+      <h2 class="text-3xl font-display font-bold uppercase text-[var(--ink)]">Hubungi Workshop</h2>
+      <div class="space-y-4 text-xs text-slate-600">
+        <p class="flex items-start gap-3">
+          <i class="fa-solid fa-location-dot text-[var(--amber-deep)] text-base mt-0.5"></i>
+          <span><strong>Workshop Utama:</strong><br>Jl. Soekarno Hatta Km. 13, Karang Joang, Balikpapan Utara, Kalimantan Timur</span>
+        </p>
+        <p class="flex items-center gap-3">
+          <i class="fa-solid fa-envelope text-[var(--amber-deep)] text-base"></i>
+          <span>support@reman.co.id</span>
+        </p>
+        <p class="flex items-center gap-3">
+          <i class="fa-brands fa-instagram text-[var(--amber-deep)] text-base"></i>
+          <a href="https://instagram.com/reman.id" target="_blank" class="hover:text-[var(--amber-deep)]">@reman.id</a>
+        </p>
+      </div>
+      <div class="blueframe rounded-sm overflow-hidden border border-slate-300 h-[220px]">
+        <iframe
+          src="https://www.google.com/maps?q=Jl.+Soekarno+Hatta+Km.+13,+Karang+Joang,+Balikpapan+Utara,+Kalimantan+Timur&output=embed"
+          class="w-full h-full border-0" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
+    </div>
+
+    <div class="md:col-span-7 bg-white p-8 rounded-sm border border-slate-200 shadow-xl">
+      <form onsubmit="event.preventDefault(); alert('Permintaan penawaran terkirim! Tim kami akan menghubungi Anda.'); this.reset();" class="space-y-4 text-sm">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2 font-mono">Nama</label>
+            <input type="text" required class="w-full bg-slate-50 border border-slate-200 rounded-sm px-4 py-3 focus:outline-none focus:border-[var(--amber)] text-xs" placeholder="Nama Lengkap">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2 font-mono">Perusahaan</label>
+            <input type="text" required class="w-full bg-slate-50 border border-slate-200 rounded-sm px-4 py-3 focus:outline-none focus:border-[var(--amber)] text-xs" placeholder="PT. United Mining">
+          </div>
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2 font-mono">Rincian Komponen Core</label>
+          <textarea rows="4" required class="w-full bg-slate-50 border border-slate-200 rounded-sm px-4 py-3 focus:outline-none focus:border-[var(--amber)] text-xs" placeholder="Sebutkan tipe engine atau serial number komponen..."></textarea>
+        </div>
+        <button type="submit" class="w-full bg-[var(--ink)] text-white font-bold py-3 rounded-sm text-xs uppercase tracking-wider hover:bg-[var(--amber)] hover:text-[var(--ink)] transition-colors">Kirim Pesan Sekarang</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="bg-[var(--ink)] text-slate-500 text-[11px] py-12 border-t border-[#2a3a4d]">
+  <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+    <div class="text-center md:text-left">
+      <p class="font-display font-bold text-white uppercase text-sm tracking-wide">REMAN</p>
+      <p class="mt-1">&copy; 2026 REMAN — Heavy Equipment Remanufacturing. All Rights Reserved.</p>
+    </div>
+    <div class="flex gap-4 text-lg">
+      <a href="https://instagram.com/reman.id" target="_blank" class="hover:text-[var(--amber)]"><i class="fa-brands fa-instagram"></i></a>
+      <a href="#" class="hover:text-[var(--amber)]"><i class="fa-brands fa-whatsapp"></i></a>
+      <a href="mailto:support@reman.co.id" class="hover:text-[var(--amber)]"><i class="fa-solid fa-envelope"></i></a>
+    </div>
+  </div>
+</footer>
+
+<!-- ============ DRAGGABLE POPUP ============ -->
+<div id="dragPopup" class="fixed z-[60] w-72 bg-white rounded-sm shadow-2xl border border-slate-200 floatIn" style="right:24px; bottom:24px;">
+  <div id="popHandle" class="bg-[var(--ink)] px-4 py-2.5 flex items-center justify-between rounded-t-sm">
+    <span class="font-mono text-[10px] text-[var(--amber)] tracking-widest flex items-center gap-2">
+      <i class="fa-solid fa-up-down-left-right"></i> GESER SAYA
+    </span>
+    <button id="popClose" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="p-5 space-y-3">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-400 to-pink-500 flex items-center justify-center text-white">
+        <i class="fa-brands fa-instagram"></i>
+      </div>
+      <div>
+        <p class="font-display font-semibold text-sm text-[var(--ink)]">Follow @reman.id</p>
+        <p class="text-[10px] text-slate-500">Update proses &amp; katalog terbaru</p>
+      </div>
+    </div>
+    <button id="popIgBtn" class="w-full bg-gradient-to-r from-amber-500 to-pink-600 text-white text-xs font-bold py-3 rounded-sm hover:opacity-90 transition-opacity">
+      BUKA INSTAGRAM
+    </button>
+  </div>
+</div>
+
+<script>
+  // Mobile menu
+  document.getElementById('mobileBtn').addEventListener('click', () => {
+    document.getElementById('mobileMenu').classList.toggle('hidden');
+  });
+
+  // ---------- Draggable popup ----------
+  (function(){
+    const pop = document.getElementById('dragPopup');
+    const handle = document.getElementById('popHandle');
+    let dragging = false, offX = 0, offY = 0;
+
+    function start(x, y){
+      dragging = true;
+      pop.classList.add('dragging');
+      const rect = pop.getBoundingClientRect();
+      offX = x - rect.left;
+      offY = y - rect.top;
+      pop.style.right = 'auto';
+      pop.style.bottom = 'auto';
+    }
+    function move(x, y){
+      if(!dragging) return;
+      let left = x - offX;
+      let top = y - offY;
+      left = Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8, left));
+      top = Math.max(8, Math.min(window.innerHeight - pop.offsetHeight - 8, top));
+      pop.style.left = left + 'px';
+      pop.style.top = top + 'px';
+    }
+    function end(){ dragging = false; pop.classList.remove('dragging'); }
+
+    handle.addEventListener('mousedown', e => start(e.clientX, e.clientY));
+    window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
+    window.addEventListener('mouseup', end);
+
+    handle.addEventListener('touchstart', e => { const t = e.touches[0]; start(t.clientX, t.clientY); }, {passive:true});
+    window.addEventListener('touchmove', e => { const t = e.touches[0]; move(t.clientX, t.clientY); }, {passive:true});
+    window.addEventListener('touchend', end);
+
+    document.getElementById('popClose').addEventListener('click', () => {
+      pop.style.display = 'none';
+    });
+    document.getElementById('popIgBtn').addEventListener('click', () => {
+      window.open('https://instagram.com/reman.id', '_blank');
+    });
+
+    // auto show after a short delay if closed initially wasn't dismissed
+    setTimeout(() => { pop.style.display = 'block'; }, 600);
+  })();
+
+  // ---------- Testimonials carousel (mix of ours + user-submitted) ----------
+  (function(){
+    const seed = [
+      {name:'Budi Santoso', role:'Kepala Mekanik, PT United Mining', team:false, stars:5,
+       text:'Final drive HD785 hasil reman dari REMAN sudah jalan 8.000 jam tanpa kebocoran. Ketepatan waktu pengerjaan juga sangat konsisten.'},
+      {name:'Tim REMAN', role:'Divisi Quality Assurance', team:true, stars:5,
+       text:'Setiap komponen yang keluar dari clean room kami wajib lolos dyno test sebelum dikirim — itu komitmen mutu yang tidak kami tawar.'},
+      {name:'Andi Wijaya', role:'Owner, CV Borneo Alat Berat', team:false, stars:5,
+       text:'Harga exchange unit jauh lebih hemat dibanding beli baru, tapi performa dan garansinya setara pabrikan. Sudah 3 tahun jadi mitra tetap.'},
+      {name:'Tim REMAN', role:'Divisi Workshop', team:true, stars:5,
+       text:'Proses remachining kami lakukan dengan toleransi mikron — bukan sekadar diperbaiki, tapi direkonstruksi ulang ke spesifikasi awal.'},
+    ];
+
+    const KEY = 'reman_reviews_v1';
+    function loadUser(){ try{ return JSON.parse(localStorage.getItem(KEY) || '[]'); }catch(e){ return []; } }
+    function saveUser(list){ localStorage.setItem(KEY, JSON.stringify(list)); }
+
+    let idx = 0, timer = null;
+    const track = document.getElementById('testiTrack');
+    const dots = document.getElementById('testiDots');
+
+    function starsHtml(n){
+      let s = '';
+      for(let i=1;i<=5;i++) s += `<i class="fa-solid fa-star ${i<=n ? 'text-[var(--amber)]' : 'text-slate-700'} text-xs"></i>`;
+      return s;
+    }
+
+    function render(){
+      const all = seed.concat(loadUser());
+      track.innerHTML = all.map((t,i) => `
+        <div class="testi-slide absolute inset-0 flex flex-col items-center justify-center text-center px-8"
+             style="opacity:${i===idx?1:0}; pointer-events:none; transition:opacity .6s ease;">
+          <div class="flex gap-1 mb-3">${starsHtml(t.stars)}</div>
+          <p class="text-sm text-slate-200 leading-relaxed max-w-xl">&ldquo;${t.text}&rdquo;</p>
+          <p class="mt-4 font-display font-semibold text-white text-sm">${t.name}</p>
+          <p class="text-[10px] font-mono tracking-widest ${t.team ? 'text-[var(--amber)]' : 'text-slate-500'} mt-1">
+            ${t.team ? 'TIM REMAN' : 'PELANGGAN'} — ${t.role}
+          </p>
+        </div>`).join('');
+      track.style.position='relative';
+
+      dots.innerHTML = all.map((_,i) => `<span class="w-2 h-2 rounded-full ${i===idx?'bg-[var(--amber)]':'bg-white/20'} inline-block cursor-pointer" data-i="${i}"></span>`).join('');
+      dots.querySelectorAll('span').forEach(dot => {
+        dot.addEventListener('click', () => { idx = parseInt(dot.dataset.i); render(); resetTimer(); });
+      });
+    }
+
+    function next(){
+      const all = seed.concat(loadUser());
+      idx = (idx + 1) % all.length;
+      render();
+    }
+    function resetTimer(){
+      if(timer) clearInterval(timer);
+      timer = setInterval(next, 4500);
+    }
+
+    render();
+    resetTimer();
+
+    // star picker
+    let chosenStars = 5;
+    const starEls = document.querySelectorAll('#starPicker i');
+    function paintStars(n){
+      starEls.forEach(el => {
+        el.classList.toggle('text-[var(--amber)]', parseInt(el.dataset.v) <= n);
+        el.classList.toggle('text-slate-600', parseInt(el.dataset.v) > n);
+      });
+    }
+    paintStars(chosenStars);
+    starEls.forEach(el => el.addEventListener('click', () => { chosenStars = parseInt(el.dataset.v); paintStars(chosenStars); }));
+
+    document.getElementById('reviewForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const name = document.getElementById('revName').value.trim();
+      const text = document.getElementById('revText').value.trim();
+      if(!name || !text) return;
+      const list = loadUser();
+      list.push({name, role:'Pelanggan REMAN', team:false, stars:chosenStars, text});
+      saveUser(list);
+      this.reset();
+      chosenStars = 5; paintStars(5);
+      const all = seed.concat(list);
+      idx = all.length - 1;
+      render();
+      resetTimer();
+    });
+  })();
+</script>
+
+</body>
+</html>
